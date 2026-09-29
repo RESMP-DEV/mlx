@@ -80,3 +80,8 @@ uv.lock
 # vim
 *.swp
 wip
+
+# Local agent/index state
+.sindexer/
+.worktrees/
+.venv/
