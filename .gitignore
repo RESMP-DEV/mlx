@@ -79,6 +79,7 @@ uv.lock
 .cache/
 # vim
 *.swp
+.idea
 wip
 
 # Local agent/index state

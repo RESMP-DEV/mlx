@@ -1,12 +1,12 @@
 // Copyright © 2024 Apple Inc.
 
+#include <nanobind/stl/complex.h>
+#include <nanobind/stl/string.h>
+
 #include <algorithm>
 #include <limits>
 #include <sstream>
 #include <tuple>
-
-#include <nanobind/stl/complex.h>
-#include <nanobind/stl/string.h>
 
 #include "python/src/convert.h"
 #include "python/src/utils.h"
@@ -185,14 +185,17 @@ mx::array cpu_nd_array_to_mlx(
 // array.
 //
 // Returns std::nullopt when the buffer cannot be adopted (no Metal backend,
-// dtype width mismatch, or a pointer the platform will not wrap), so the caller
-// can fall back to a copy or raise.
+// dtype width mismatch, a pointer not aligned to the item size, or a pointer
+// the platform will not wrap), so the caller can fall back to a copy or raise.
 std::optional<mx::array> cpu_nd_array_to_mlx_no_copy(
     nb::ndarray<nb::ro> nd_array,
     const mx::Shape& shape,
     mx::Dtype dst_dtype) {
+  // GPU kernels need aligned data
+  auto ptr = reinterpret_cast<uintptr_t>(nd_array.data());
   if (!mx::metal::is_available() ||
-      nd_array.itemsize() != mx::size_of(dst_dtype)) {
+      nd_array.itemsize() != mx::size_of(dst_dtype) ||
+      ptr % nd_array.itemsize() != 0) {
     return std::nullopt;
   }
 
