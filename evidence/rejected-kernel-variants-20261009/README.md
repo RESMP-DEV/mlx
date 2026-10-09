@@ -18,3 +18,12 @@ The canonical geometry stays BM=32, BN=64, BK=64, WM=2, WN=2 with the r=4 fast
 gather. Upstream `grouped-mm-metal` was reviewed as design input and cannot
 directly substitute, because its float NAX tile needs a threadgroup tile the
 quantized loader cannot hold.
+
+## Dense MXFP4 QMV read variants, archived 2026-10-09
+
+`dense-qmv-read-variants.patch` contains the rejected one-pack, four-pack,
+shape-gated, and diagnostic-stride variants. The global four-pack build changed
+real output; all isolated variants either remained below the model gate or
+regressed the dominant GDN projection. The accepted alternative was the fused
+GDN convolution/state kernel in mlx-lm commit `18bb2e7`, not a dense-QMV read
+geometry change.
