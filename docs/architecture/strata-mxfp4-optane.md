@@ -1543,3 +1543,35 @@ projection; all were rejected. QuantizedLinear call census and C++ stride logs
 show that the real dense QMV inputs are already row-contiguous, so there was no
 cheap copy-elimination seam in QMV itself. Receipt:
 `build/reports/local-ple-storage/decode-hillclimb-rejections-20261009.json`.
+
+## Upstream synchronization through 388f227f4, 2026-10-13
+
+Upstream advanced from `77bf1fa01` to `388f227f4`. A full merge was built and
+audited first. It included useful correctness work across foreign-buffer
+ownership, compile caches, negative strides, large reductions, convolution
+bounds, batched `qvm_split_k`, sort layout selection, scalar conversion, FFT,
+optimizer overflow, and IO, plus new thin-N/thin-M NAX GEMM dispatch. The full
+merge passed 83 focused quantized/GEMM tests with 6,238 subtests, but it changed
+the fixed 4,096-token Qwen continuation at a near tie.
+
+Commit `494c8a6c9`, which changes quantized split-K partials from the input type
+to float32, was identified as the divergence source. Reverting only that commit
+restored byte-identical 4,096-token output. That change may improve generic
+numerical accuracy, but it is incompatible with this campaign's exact-output
+contract until a separate quality budget explicitly accepts its distributional
+change. It remains excluded locally.
+
+The selective integration passed 82 focused quantized/GEMM tests with 6,226
+subtests and a broader 270-test regression set with 6,739 subtests. A strict
+one-window full-vocabulary comparison against the pre-merge core produced
+exactly equal logits, zero KL in both directions, and 100 percent top-1
+agreement. Short-context output stayed exact and latency remained within noise.
+At 4,096 tokens, three exact-output pairs improved median decode p50 from
+27.299 to 27.090 ms and p95 from 27.706 to 27.555 ms. An instrumented 8,192-token
+prefill profile remained compute-dominated and showed no material TTFT change.
+
+The validated result is local MLX `main` merge `24f048a33`, containing upstream
+through `388f227f4` with `494c8a6c9` reverted. The promoted main Python/Metal
+build passed an M4 Max GPU smoke and reproduced the canonical Qwen continuation
+at 24.683 ms decode p50. Nothing was pushed or upstreamed. Receipt:
+`build/reports/local-ple-storage/upstream-388f-selective-promoted-20261013.json`.
