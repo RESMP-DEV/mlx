@@ -121,7 +121,7 @@ inline int get_qmv_batch_limit(int D, int O, metal::Device& d) {
         } else if (D <= 4096 && O <= 4096) {
           return 10;
         } else {
-          return 6;
+          return (arch_gen == 13 && arch_size == 's') ? 7 : 6;
         }
     }
   } else {
@@ -633,11 +633,11 @@ void qmv_wide(
 }
 
 void qvm_split_k(
-    const array& x,
+    array x,
     const array& w,
     const array& scales,
     const std::optional<array>& biases,
-    array& out,
+    array out,
     int group_size,
     int bits,
     int M,
@@ -651,6 +651,16 @@ void qvm_split_k(
   int split_k = K > 8192 ? 32 : 8;
   int split_D = (K + split_k - 1) / split_k;
   int B = out.size() / M / N;
+
+  // When weights are 2D, collapse leading batch dimensions of x and out into M
+  // so the kernel and reduction operate on standard 2D matrices.
+  if (B == 1 && x.ndim() != 2) {
+    x = reshape_in_eval(x, {M, K}, s);
+  }
+  if (B == 1 && out.ndim() != 2) {
+    out = reshape_in_eval(out, {M, N}, s);
+  }
+
   B *= split_k;
 
   constexpr int num_simdgroups = 2;
@@ -1207,15 +1217,11 @@ void qmm_splitk(
   int k_partition_size = K / split_k;
   int split_k_partition_stride = M * N;
 
-  // Allocate intermediate buffer: insert split_k at the front so that
-  // partition_stride = M * N matches the leading stride of the buffer.
+  // Allocate a float32 buffer for the partial sums, so that each partition is
+  // rounded to the output type only once, after they're summed, as in
+  // steel_matmul_splitk.
   auto& compute_encoder = metal::get_command_encoder(s);
-  auto temp_shape = out.shape();
-  if (temp_shape.size() == 1) {
-    temp_shape.insert(temp_shape.begin(), 1);
-  }
-  temp_shape.insert(temp_shape.begin(), split_k);
-  array intermediate(temp_shape, x.dtype(), nullptr, {});
+  array intermediate({split_k, M, N}, float32, nullptr, {});
   intermediate.set_data(allocator::malloc(intermediate.nbytes()));
   compute_encoder.add_temporary(intermediate);
 
@@ -1257,13 +1263,18 @@ void qmm_splitk(
 
   compute_encoder.dispatch_threadgroups(grid_dims, group_dims);
 
-  // Sum across split_k dimension (axis 0)
-  ReductionPlan plan(
-      ReductionOpType::ContiguousStridedReduce,
-      {intermediate.shape(0)},
-      {intermediate.strides(0)});
-  strided_reduce_general_dispatch(
-      intermediate, out, "sum", plan, {0}, compute_encoder, d, s);
+  // Sum the partitions and cast to the output type
+  auto accum_kname = "steel_gemm_splitk_accum_" + type_to_name(out) + "_" +
+      type_to_name(intermediate);
+  auto accum_kernel = get_steel_gemm_splitk_accum_kernel(
+      d, accum_kname, intermediate, out, false);
+  compute_encoder.set_compute_pipeline_state(accum_kernel);
+  compute_encoder.set_input_array(intermediate, 0);
+  compute_encoder.set_output_array(out, 1);
+  compute_encoder.set_bytes(split_k, 2);
+  compute_encoder.set_bytes(split_k_partition_stride, 3);
+  compute_encoder.set_bytes(N, 4);
+  compute_encoder.dispatch_threads(MTL::Size(N, M, 1), get_block_dims(N, M, 1));
 }
 
 void gather_qmm(
@@ -1842,7 +1853,8 @@ void dispatch_qmv(
     const Stream& s,
     const std::string& mode) {
   // It is a qmv with a small inner dimension so route to qmv_quad kernel
-  if ((K == 128 || K == 64) && is_power_of_2(bits) && !global_scale) {
+  if ((K == 128 || (K == 64 && bits >= 2)) && is_power_of_2(bits) &&
+      !global_scale) {
     qmv_quad(x, w, scales, biases, out, group_size, bits, M, N, K, d, s, mode);
     return;
   }

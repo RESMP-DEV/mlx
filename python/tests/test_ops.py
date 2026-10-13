@@ -378,6 +378,21 @@ class TestOps(mlx_tests.MLXTestCase):
         self.assertEqual(z.dtype, mx.int32)
         self.assertEqual(z.item(), 2)
 
+    def test_complex_divide_extreme_values(self):
+        values = np.array(
+            [1e20 + 1e20j, 1e-30 + 1e-30j, 1 + 0j, 1e20 + 0j, 3 + 4j],
+            dtype=np.complex64,
+        )
+        divisors = np.array(
+            [1e20 + 1e20j, 1e-30 + 1e-30j, 1e20 + 0j, 1 + 0j, 1 + 2j],
+            dtype=np.complex64,
+        )
+        a, b = mx.array(values), mx.array(divisors)
+        for result in [mx.divide(a, b), a / b]:
+            np.testing.assert_allclose(result, values / divisors, rtol=1e-6, atol=0)
+        for result in [1 / b, mx.reciprocal(b)]:
+            np.testing.assert_allclose(result, 1 / divisors, rtol=1e-6, atol=0)
+
     def test_floor_divide(self):
         a = [4, 5, -1, -6]
         b = [-2, 3, 2, -3]
@@ -399,9 +414,33 @@ class TestOps(mlx_tests.MLXTestCase):
                     np.array(b, dtype=np_int_float_dtypes[kind]),
                 )
                 self.assertEqual(result.tolist(), expected.tolist())
+                self.assertEqual(result.dtype, dtype)
 
                 result = mx.array(a, dtype=dtype) // mx.array(b, dtype=dtype)
                 self.assertEqual(result.tolist(), expected.tolist())
+
+        # Unsigned integers use the plain quotient.
+        ua = [7, 0, 5]
+        ub = [2, 2, 3]
+
+        mx_uint_dtypes = mx.__array_namespace_info__().dtypes(
+            kind=("unsigned integer",)
+        )
+        np_uint_dtypes = np.__array_namespace_info__().dtypes(
+            kind=("unsigned integer",)
+        )
+
+        for kind, dtype in mx_uint_dtypes.items():
+            with self.subTest(dtype=dtype):
+                result = mx.floor_divide(
+                    mx.array(ua, dtype=dtype), mx.array(ub, dtype=dtype)
+                )
+                expected = np.floor_divide(
+                    np.array(ua, dtype=np_uint_dtypes[kind]),
+                    np.array(ub, dtype=np_uint_dtypes[kind]),
+                )
+                self.assertEqual(result.tolist(), expected.tolist())
+                self.assertEqual(result.dtype, dtype)
 
     def test_remainder(self):
         # Complex is not supported and has to say so rather than quietly
@@ -1354,10 +1393,22 @@ class TestOps(mlx_tests.MLXTestCase):
 
         self.assertTrue(np.allclose(result, expected))
 
+        a = math.pi
+        result = mx.degrees(a)
+        expected = np.degrees(a, dtype=np.float32)
+
+        self.assertTrue(np.allclose(result, expected))
+
     def test_radians(self):
         a = mx.array([0.0, 45.0, 90.0, 180.0, 270.0, 360.0])
         result = mx.radians(a)
         expected = np.radians(a, dtype=np.float32)
+
+        self.assertTrue(np.allclose(result, expected))
+
+        a = 45.0
+        result = mx.degrees(a)
+        expected = np.degrees(a, dtype=np.float32)
 
         self.assertTrue(np.allclose(result, expected))
 
@@ -2644,11 +2695,9 @@ class TestOps(mlx_tests.MLXTestCase):
                     mxop(a, axis=ax)
 
             # Valid negative axes still work and agree with the positive one
-            # logcumsumexp has no integer kernel, so use a float input
-            a_ = a.astype(mx.float32) if op == "logcumsumexp" else a
             for ax in [-1, -2, -3]:
-                out_neg = mxop(a_, axis=ax)
-                out_pos = mxop(a_, axis=ax + a_.ndim)
+                out_neg = mxop(a, axis=ax)
+                out_pos = mxop(a, axis=ax + a.ndim)
                 self.assertTrue(mx.array_equal(out_neg, out_pos))
 
     def test_scans(self):
@@ -4118,6 +4167,11 @@ class TestOps(mlx_tests.MLXTestCase):
         self.assertEqual(c.shape, (3, 2, 5))
         self.assertTrue(mx.array_equal(c, mx.ones((3, 2, 5), dtype=mx.bool_)))
 
+        x = mx.array([1, -1, 1, -1])
+        y = mx.array([1, 1, -1, -1])
+        out = (x > 0) ^ (y > 0)
+        self.assertEqual(out.tolist(), [False, True, True, False])
+
     def test_bitwise_grad(self):
         a = np.random.randint(0, 10, size=(4, 3))
         b = np.random.randint(0, 10, size=(4, 3))
@@ -4434,6 +4488,23 @@ class TestOps(mlx_tests.MLXTestCase):
         expected[1:, 2:, 3:] = update
         self.assertTrue(mx.array_equal(expected, out))
 
+        # Strided, broadcast and reversed start indices
+        x = mx.arange(64).reshape(8, 8)
+        update = mx.zeros((2, 2), dtype=x.dtype)
+        starts = [
+            (mx.array([1, 5, 2, 5])[::2], (1, 2)),
+            (mx.broadcast_to(mx.array([2]), (2,)), (2, 2)),
+            (mx.array([4, 1])[::-1], (1, 4)),
+        ]
+        for start, (i, j) in starts:
+            out = mx.slice(x, start, (0, 1), (2, 2))
+            self.assertTrue(mx.array_equal(out, x[i : i + 2, j : j + 2]))
+
+            out = mx.slice_update(x, update, start, (0, 1))
+            expected = mx.arange(64).reshape(8, 8)
+            expected[i : i + 2, j : j + 2] = update
+            self.assertTrue(mx.array_equal(out, expected))
+
     def test_broadcast_arrays(self):
         a = mx.array(1)
         b = mx.array(1.0)
@@ -4622,6 +4693,12 @@ class TestOps(mlx_tests.MLXTestCase):
             )
         )
 
+        # source with a negative stride
+        a = mx.zeros((4,))
+        mask = mx.array([True, False, True, True])
+        a[mask] = mx.array([1.0, 2.0, 3.0, 4.0])[::-1]
+        self.assertTrue(mx.array_equal(a, mx.array([4.0, 0.0, 3.0, 2.0])))
+
     def test_broadcast_shapes(self):
         # Basic broadcasting
         self.assertEqual(mx.broadcast_shapes((1, 2, 3), (3,)), (1, 2, 3))
@@ -4659,6 +4736,28 @@ class TestOps(mlx_tests.MLXTestCase):
 
         with self.assertRaises(ValueError):
             mx.broadcast_shapes()
+
+    def test_sort_transposed(self):
+        # The sorted axis can keep the smallest or largest stride while the
+        # axes that are not sorted are no longer a row major block, which is
+        # what the contiguous kernel's row enumeration assumes.
+        np.random.seed(0)
+        for shape in [(3, 4, 8), (2, 1, 6), (2, 3, 4, 2), (2, 1, 3, 4)]:
+            a_np = np.random.uniform(0, 100, size=shape).astype(np.float32)
+            a_mx = mx.array(a_np)
+            for perm in permutations(range(len(shape))):
+                b_np = np.transpose(a_np, perm)
+                b_mx = mx.transpose(a_mx, perm)
+                for axis in range(len(shape)):
+                    with self.subTest(shape=shape, perm=perm, axis=axis):
+                        s_np = np.sort(b_np, axis=axis)
+                        self.assertTrue(np.array_equal(s_np, mx.sort(b_mx, axis=axis)))
+                        idx = np.array(mx.argsort(b_mx, axis=axis))
+                        self.assertTrue(
+                            np.array_equal(
+                                s_np, np.take_along_axis(b_np, idx, axis=axis)
+                            )
+                        )
 
     def test_sort_nan(self):
         for dtype in [mx.float32, mx.float16, mx.bfloat16]:
