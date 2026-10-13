@@ -1575,3 +1575,17 @@ through `388f227f4` with `494c8a6c9` reverted. The promoted main Python/Metal
 build passed an M4 Max GPU smoke and reproduced the canonical Qwen continuation
 at 24.683 ms decode p50. Nothing was pushed or upstreamed. Receipt:
 `build/reports/local-ple-storage/upstream-388f-selective-promoted-20261013.json`.
+
+## Local main consolidation, 2026-10-13
+
+The campaign branches were consolidated without pushing. MLX local `main`
+contains the selective upstream integration, campaign architecture/evidence,
+kernel rejection archives, storage benchmarks, and the storage-tier plan. The
+early MLX `_io_ple` reader is preserved under `evidence/prototypes` rather than
+exposed as a live module; mlx-lm owns the production external-PLE reader.
+
+mlx-lm local `main` fast-forwarded to `18bb2e7`, so the Qwen4Exp port, dynamic
+native MXFP4 modes, greedy fast path, idle warmup, packed-T1 GDN, external PLE
+runtime, cache repairs, performance harnesses, and fused GDN decode kernel are
+all on `main`. Focused mlx-lm tests passed 59 cases with nine context skips.
+Receipt: `evidence/2026-10-13-local-main-consolidation.md`.
