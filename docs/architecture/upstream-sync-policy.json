@@ -84,7 +84,8 @@
         "merge_style": "merge upstream/main; do not rebase private main",
         "rerere": true,
         "conflict_style": "zdiff3",
-        "push": false
+    "upstream_push": false,
+    "resmp_dev_push": "requires explicit user authorization"
     },
     "non_claims": [
         "No distributed two-rank gate is part of this policy yet.",

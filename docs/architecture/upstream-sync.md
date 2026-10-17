@@ -20,7 +20,9 @@ worktree.
    receipt. Only then merge private `main`.
 
 Do not rebase private `main`. Merge commits preserve the audit trail and make
-upstream numerical changes visible. Never push or open an upstream PR.
+upstream numerical changes visible. Never push to `upstream` or open an upstream
+PR. Pushing a RESMP-DEV remote is allowed when the user authorizes that
+publication.
 
 ## Boundary decisions
 
