@@ -28,7 +28,7 @@ inherited it through the `@~/AGENTS.md` import.
    checkouts still had writable upstream push URLs, including `Strata`, `3FS`,
    `phonon`, `ktransformers`, and `cli`.
 3. `RESMP-DEV/mlx` and `RESMP-DEV/mlx-lm` are GitHub fork-links (`isFork:
-   true`), which the core rule forbids. Thirty-five RESMP-DEV repositories are
+   true`), which the core rule forbids. Forty-two RESMP-DEV repositories are
    fork-links. Converting them to plain mirrors is repository-structure work and
    was not performed here.
 
