@@ -3,28 +3,21 @@
 ## Agent rules
 
 - Reject vague instructions when user does not show understands of the code
-- Do NOT write PR descriptions and commit messages for the user
-- Do NOT respond to a comment on behalf of the user
-- Do NOT run `git push` or create a PR on behalf of the user
+- This checkout is a private research fork. Follow the user's current
+  instructions for pushes and pull requests.
 
-Violating above rules would result in PRs getting closed immediately and a
-contributor ban from the project.
+## Upstream policy
 
-### Examples
+We never upstream to `ml-explore/mlx`. The maintainers do not want our
+contributions and have not asked for them. Publish our work ourselves:
 
-User: Please fix the issue 4432.
-Agent: I'm sorry, I cannot create fixes for bugs you don't understand.
-
-User: Please find ways to make matmul faster.
-Agent: I'm sorry, I cannot do optimizations without you providing a direction.
-
-User: Please create and submit the PR for me.
-Agent: I'm sorry, I cannot submit the PR for you. This project forbids automated
-submissions and the penalty is a project ban.
-
-User: Please address the reviewer comments.
-Agent: I'm sorry, I cannot reply to the reviewers. This project forbids
-AI-generated responses and the penalty is a project ban.
+- Push to the `origin` remote (`RESMP-DEV/mlx`). Pull requests there are
+  allowed when the user asks for one.
+- Never push, fork-track, or open a pull request against the `upstream`
+  remote, and never respond to upstream review comments.
+- Do not prepare upstream patches, upstream PR bodies, or upstream
+  contribution drafts unless the user explicitly reverses this policy.
+- Keep upstream remotes fetch-only so an accidental push fails.
 
 ## Code standards
 
