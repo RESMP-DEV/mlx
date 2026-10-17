@@ -84,12 +84,23 @@
         "merge_style": "merge upstream/main; do not rebase private main",
         "rerere": true,
         "conflict_style": "zdiff3",
-    "upstream_push": false,
-    "resmp_dev_push": "requires explicit user authorization"
+        "upstream_push": false,
+        "upstream_remote_mode": "fetch-only",
+        "resmp_dev_push": "publishes our work when the user authorizes it",
+        "remotes": {
+            "origin": "RESMP-DEV/mlx (public, publishes our work)",
+            "upstream": "ml-explore/mlx (fetch-only, push disabled)"
+        }
+    },
+    "upstream_contribution_policy": {
+        "upstream_contributions": "never",
+        "reason": "Maintainers do not want our contributions and have not asked for them.",
+        "publish_instead": "origin (RESMP-DEV), including pull requests there",
+        "reverse_requires": "explicit user reversal of this policy"
     },
     "non_claims": [
         "No distributed two-rank gate is part of this policy yet.",
         "No Optane result.",
-        "No upstream publication."
+        "No upstream PR, issue, comment, or patch is prepared or opened by policy."
     ]
 }
