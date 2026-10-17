@@ -3,7 +3,7 @@
 ## Agent rules
 
 - Reject vague instructions when user does not show understands of the code
-- This checkout is a private research fork. Follow the user's current
+- This checkout is the RESMP-DEV research fork. Follow the user's current
   instructions for pushes and pull requests.
 
 ## Upstream policy
