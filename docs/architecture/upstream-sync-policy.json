@@ -1,0 +1,94 @@
+{
+    "schema_version": 1,
+    "recorded_at": "2026-10-17",
+    "scope": "Standing upstream synchronization policy for the Qwen MXFP4 MLX campaign",
+    "update_order": ["mlx", "mlx-lm"],
+    "repositories": {
+        "mlx": {
+            "path": "/Users/kearm/mlx",
+            "branch": "main",
+            "remote": "upstream",
+            "integration_worktree": ".worktrees/upstream-sync",
+            "private_change_policy": "Keep MLX source close to upstream; keep campaign implementations in mlx-lm; keep local MLX additions primarily under docs, evidence, and benchmarks",
+            "sensitive_paths": [
+                "mlx/backend/metal/quantized.cpp",
+                "mlx/backend/metal/kernels/quantized.h",
+                "mlx/backend/metal/kernels/quantized_nax.h",
+                "mlx/backend/metal/kernels/fp_quantized.h",
+                "mlx/backend/metal/matmul.cpp",
+                "mlx/backend/metal/gated_delta_update.cpp",
+                "mlx/backend/metal/sort.cpp"
+            ],
+            "tests": [
+                "PYTHONPATH=$PWD/python python -m pytest python/tests/test_quantized.py python/tests/test_blas.py -q",
+                "PYTHONPATH=$PWD/python python -m pytest python/tests/test_conv.py python/tests/test_fast_sdpa.py python/tests/test_reduce.py -q"
+            ],
+            "build": [
+                "cmake -S . -B build-py -G Ninja -DCMAKE_BUILD_TYPE=Release -DMLX_BUILD_TESTS=OFF -DMLX_BUILD_EXAMPLES=OFF -DMLX_BUILD_BENCHMARKS=OFF -DMLX_BUILD_PYTHON_BINDINGS=ON",
+                "cmake --build build-py --target core.cpython-312-darwin.so -j 8",
+                "cp build-py/core.cpython-312-darwin.so python/mlx/core.cpython-312-darwin.so",
+                "cp build-py/mlx/backend/metal/kernels/mlx.metallib python/mlx/lib/mlx.metallib"
+            ]
+        },
+        "mlx-lm": {
+            "path": "/Users/kearm/mlx-lm",
+            "branch": "main",
+            "remote": "upstream",
+            "integration_worktree": ".worktrees/upstream-sync",
+            "private_change_policy": "Merge upstream into private main; keep the Qwen runtime in dedicated modules and minimize edits in shared loader/server files",
+            "sensitive_paths": [
+                "mlx_lm/generate.py",
+                "mlx_lm/models/switch_layers.py",
+                "mlx_lm/models/qwen4_exp.py",
+                "mlx_lm/models/qwen4_exp_ple.py",
+                "mlx_lm/quant/dynamic_quant.py",
+                "mlx_lm/server.py",
+                "mlx_lm/utils.py"
+            ],
+            "tests": [
+                "PYTHONPATH=$PWD python -m pytest tests/test_qwen4_exp_ple.py tests/test_dynamic_quant.py tests/test_greedy_fast.py tests/test_ple_runtime.py tests/test_server.py -q"
+            ],
+            "expected_conflicts": [
+                "mlx_lm/server.py: union upstream processor import with private greedy_sampler import and retain idle warmup hooks",
+                "mlx_lm/utils.py: union MODEL_REMAPPING additions and retain private post-load fuse/compile hooks"
+            ]
+        }
+    },
+    "numerical_exclusions": [
+        {
+            "commit": "494c8a6c93e52cb4617935ebc8fa384c7c8e891d",
+            "title": "Keep split-K quantized matmul partials in float32",
+            "state": "upstream commit present; local revert active",
+            "reason": "changed the fixed 4096-token Qwen continuation at a near tie",
+            "reevaluate_with": [
+                "full-vocabulary KL gate",
+                "loose perplexity gate",
+                "exact generated-ID budget",
+                "long-context latency gate"
+            ]
+        }
+    ],
+    "acceptance_gates": {
+        "source_tests": "Run repository-specific focused suites before model gates",
+        "mlx_change": "Build both cores and compare old versus new with at least five alternating short-context pairs and three 4096-token pairs",
+        "mlx_lm_change": "Run focused private suites and a real-model smoke; use same-process A/B when only Python runtime changes",
+        "numerical_change": [
+            "exact generated IDs",
+            "full-vocabulary KL both directions",
+            "loose perplexity coherence gate",
+            "no material p50/p95 regression"
+        ],
+        "promotion": "Merge first in an integration worktree; merge private main only after tests and Qwen gates pass"
+    },
+    "git_policy": {
+        "merge_style": "merge upstream/main; do not rebase private main",
+        "rerere": true,
+        "conflict_style": "zdiff3",
+        "push": false
+    },
+    "non_claims": [
+        "No distributed two-rank gate is part of this policy yet.",
+        "No Optane result.",
+        "No upstream publication."
+    ]
+}

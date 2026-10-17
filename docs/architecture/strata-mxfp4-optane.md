@@ -1589,3 +1589,20 @@ native MXFP4 modes, greedy fast path, idle warmup, packed-T1 GDN, external PLE
 runtime, cache repairs, performance harnesses, and fused GDN decode kernel are
 all on `main`. Focused mlx-lm tests passed 59 cases with nine context skips.
 Receipt: `evidence/2026-10-13-local-main-consolidation.md`.
+
+## Upstream sync policy, 2026-10-17
+
+The campaign now has a standing two-repo update contract:
+`docs/architecture/upstream-sync.md` and
+`docs/architecture/upstream-sync-policy.json`. `scripts/upstream_sync.py`
+reports drift, checks clean state plus `rerere`/`zdiff3`, and creates a dated
+integration worktree. MLX updates first, followed by mlx-lm. Private main uses
+merge history rather than rebase, and promotion requires focused tests plus the
+Qwen exact-output and numerical gates.
+
+The latest sync brought MLX to `b6642e604` and mlx-lm to `93e6d4a`. MLX passed
+172 focused tests with 12,668 subtests, both short and 4,096-token Qwen gates
+remained exact, and long-context decode improved slightly. mlx-lm resolved its
+two expected shared-file conflicts as feature unions and passed 63 focused
+tests with nine skips. Receipt:
+`evidence/2026-10-17-upstream-sync-b664-93e6.md`.
