@@ -19,6 +19,10 @@ asked for them. All our work is published on RESMP-DEV instead.
 
 ## Remote enforcement
 
+The policy is permanent for `ml-explore/mlx`. The organization-owned
+policy and audit receipts live in private `RESMP-DEV/agent-policy`.
+
+
 Both upstream push URLs now point to the deliberately invalid sentinel
 `/Users/kearm/.git/no-upstream-push`. Fetch URLs are unchanged. A dry-run push
 to `upstream` fails immediately with exit 128 and never reaches the network:
