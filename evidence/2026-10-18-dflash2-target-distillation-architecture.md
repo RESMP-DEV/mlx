@@ -41,11 +41,11 @@ signals:
 - prior target path: the calibrated local Qwen3.8-27B MLX MXFP4 runtime;
 - prior draft path: local BF16 DFlash2 with affine W4 runtime.
 
-The existing trainer is selector-only: it freezes the transformer, target
-projection, and both selector codebooks, and trains only the 1,310,720-parameter
+The original trainer was selector-only: it froze the transformer, target
+projection, and both selector codebooks, and trained only the 1,310,720-parameter
 selector hidden projection. Those candidates passed exact output parity but
-failed the paired live-acceptance gate and were rejected. No full DFlash2
-transformer or LoRA distillation has completed yet.
+failed the paired live-acceptance gate and were rejected. The corrected trainer
+now also supports draft LoRA.
 
 ## Efficient training modes
 
@@ -100,19 +100,72 @@ ratio, memory reduction, or throughput alone is not acceptance.
 - Remote: `RESMP-DEV/dflash-mlx`.
 - LoRA trainer commit: `RESMP-DEV/mlx-gptq-mxfp`,
   branch `work/dflash2-calibration`, commit
-  `f184d01` (`Add DFlash2 draft LoRA training mode`).
+  `3a6bf68` (`Export merged DFlash2 LoRA checkpoints cleanly`), including
+  `f184d01`, `c0955d4`, `cbf66a2`, and `5ce01f2`.
 - Validation: 21 tests passed and 3 skipped locally; the focused DFlash2
-  suite passed 4/4 on B550 after transfer.
+  suite grew to 7 tests and passed on both the Mac and B550; the full local
+  suite reached 24 passed and 3 skipped.
 - Real B550 BF16 LoRA smoke:
   `/home/kearm/dflash2-distill/lora-smoke-f184d01`.
   It used two real captured cycles, rank 4 over 46 linear modules, and
   3,655,680 total trainable parameters including the selector projection.
   Training completed in 6.298 seconds. The exported merged model and adapter
   files contain no non-finite floating-point tensors.
-- B550 pinned target download: detached tmux session `qwen38-27b-hfd`, output
-  `/home/kearm/training/models/Qwen3.8-27B-1d4bf0f`, full HFD verification
-  requested after transfer.
 
-At the time of this receipt the pinned target transfer was still active. This
-receipt does not claim a full LoRA campaign, paired live acceptance win, or
+## First full LoRA campaign and rejection
+
+A real LR probe used rank 16, 160 cycles, and two held-out prompts across
+eight trials. The best probe LR was `4.7520278376003854e-5` with held-out CE
+`1.254162421842111`; summary:
+`/home/kearm/dflash2-distill/studies/lora-r16-lr/summary.json`.
+
+The full run covered all 1,981 cycles and held out prompts 19 and 22:
+
+- output: `/home/kearm/dflash2-distill/lora-r16-e1-lr4.7520278e-5-merged`;
+- 1,834 optimizer steps in 98.422 seconds on one RTX 3090 Ti;
+- 46 LoRA modules, rank 16, alpha 32;
+- 10,690,560 trainable parameters including the selector projection;
+- prompt-grouped validation CE `0.30501226877256044`;
+- merged model SHA-256:
+  `20d140339e0a6468ed6926ac41441202f834337ea4922ed3f1a83fe1bfd17e40`;
+- adapter SHA-256:
+  `8ba01e6762390548f4139d69acd40f57313fc926b8ad8d4d2e6b48d14e8a7c7c`.
+
+The first export retained wrapper keys and was rejected by the MLX loader.
+Commit `3a6bf68` now unwraps adapters after merging; the regenerated checkpoint
+has the original 81 tensor keys and no `.a`, `.b`, or `.base.weight` wrapper
+entries.
+
+The corrected artifact passed exact 256-token smoke parity (`token_match: true`)
+at 69.922% acceptance:
+`/Users/kearm/mlx/build/reports/dflash/lora-r16-mxfp4-parity-256-v3`.
+The benchmark now records per-run parity following DFlash MLX commit
+`47e3483`.
+
+The full 24-prompt paired corpus rejected it:
+
+- calibrated MXFP4 control mean acceptance: `66.6829427083%`;
+- LoRA candidate mean acceptance: `63.6067708333%`;
+- delta: `-3.076171875` percentage points;
+- candidate record: 1 win, 3 ties, 20 losses.
+
+Paired receipt:
+`/Users/kearm/mlx/build/reports/dflash/lora-r16-e1-vs-calibrated-mxfp4-corpus24.json`.
+The artifact remains local and rejected; it was not uploaded to Hugging Face.
+This result shows that BF16 LoRA makes full-head experiments extremely cheap,
+but the first offline objective still does not transfer to live acceptance.
+
+## Target transfer state
+
+The Mac source copy passed full pinned HFD verification at revision
+`1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0`: 32/32 files and
+55,586,114,863 bytes. A direct LAN seed transfer is filling
+`/home/kearm/training/qwen38-27B-seed` and a watcher hard-links completed files
+into `/home/kearm/training/models/Qwen3.8-27B-1d4bf0f`, then runs full HFD
+verification. The original B550 HFD job was stopped because unrelated
+DeepSeek-V4.1-Flash and Qwen3.8-Flash-Next HFD jobs were consuming the
+wide-area link; those unrelated jobs remain untouched.
+
+At the time of this receipt the LAN transfer was still active. This receipt
+does not claim a target transfer completion receipt, a live-acceptance win, or
 Hugging Face publication.
