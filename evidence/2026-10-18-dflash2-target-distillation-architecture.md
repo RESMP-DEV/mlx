@@ -98,10 +98,21 @@ ratio, memory reduction, or throughput alone is not acceptance.
 - Branch: `work/local-mxfp4-dflash2`.
 - Commit: `36859b2` (`docs: record DFlash2 distillation boundaries`).
 - Remote: `RESMP-DEV/dflash-mlx`.
+- LoRA trainer commit: `RESMP-DEV/mlx-gptq-mxfp`,
+  branch `work/dflash2-calibration`, commit
+  `f184d01` (`Add DFlash2 draft LoRA training mode`).
+- Validation: 21 tests passed and 3 skipped locally; the focused DFlash2
+  suite passed 4/4 on B550 after transfer.
+- Real B550 BF16 LoRA smoke:
+  `/home/kearm/dflash2-distill/lora-smoke-f184d01`.
+  It used two real captured cycles, rank 4 over 46 linear modules, and
+  3,655,680 total trainable parameters including the selector projection.
+  Training completed in 6.298 seconds. The exported merged model and adapter
+  files contain no non-finite floating-point tensors.
 - B550 pinned target download: detached tmux session `qwen38-27b-hfd`, output
   `/home/kearm/training/models/Qwen3.8-27B-1d4bf0f`, full HFD verification
   requested after transfer.
 
 At the time of this receipt the pinned target transfer was still active. This
-receipt does not claim that the new BF16 target transfer, LoRA implementation,
-or full-head distillation has completed.
+receipt does not claim a full LoRA campaign, paired live acceptance win, or
+Hugging Face publication.
