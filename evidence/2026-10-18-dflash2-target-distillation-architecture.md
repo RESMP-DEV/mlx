@@ -62,9 +62,9 @@ The reusable architecture now records these modes:
 - MXFP4 GPTQ: post-training deployment compression, not training.
 
 Measured head shape makes draft LoRA inexpensive relative to the full student:
-rank-8 adapters over the five decoder layers are about 4.19 million parameters,
-rank-16 about 8.38 million, rank-32 about 16.75 million, and rank-64 about
-33.51 million. Rank-32 is approximately 0.87 percent of all DFlash2 parameters.
+rank-8 adapters over the five decoder layers are about 4.44 million parameters,
+rank-16 about 8.89 million, rank-32 about 17.78 million, and rank-64 about
+35.55 million. Rank-32 is approximately 0.92 percent of all DFlash2 parameters.
 A rank-16 adapter on the 25,600-by-5,120 target projection adds 491,520
 parameters.
 
