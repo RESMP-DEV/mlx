@@ -4,8 +4,8 @@ Date: 2026-10-19
 
 ## Repository
 
-- Hub repository: `Kearm/Qwen3.8-27B-DFlash2-G3-Combined`
-- URL: `https://huggingface.co/Kearm/Qwen3.8-27B-DFlash2-G3-Combined`
+- Hub repository: `RESMP-DEV/Qwen3.8-27B-DFlash2-G3-Combined`
+- URL: `https://huggingface.co/RESMP-DEV/Qwen3.8-27B-DFlash2-G3-Combined`
 - visibility: private
 - revision: `93d507ea14d63bb7063914725d4fa6b5749ac83d`
 - last modified: `2026-10-19T15:08:50Z`
@@ -69,6 +69,25 @@ The upload completed at Hub revision
 `93d507ea14d63bb7063914725d4fa6b5749ac83d`. An authenticated Hub tree query
 confirmed all six filenames and the model LFS OID above. An unauthenticated
 tree query returned HTTP 401, confirming the private visibility.
+
+## Namespace correction
+
+The initial creation used `Kearm/Qwen3.8-27B-DFlash2-G3-Combined` because an
+older HF-specific default named the personal namespace. That default conflicted
+with the user's standing standard and was corrected. The repository was moved
+with `hf repos move` to
+`RESMP-DEV/Qwen3.8-27B-DFlash2-G3-Combined`; the move receipt is
+`build/reports/dflash/hf-g3-repo-move.json`.
+
+Post-move verification confirmed:
+
+- repository ID and author: `RESMP-DEV/Qwen3.8-27B-DFlash2-G3-Combined`;
+- visibility: private;
+- revision unchanged: `93d507ea14d63bb7063914725d4fa6b5749ac83d`;
+- model LFS OID unchanged:
+  `c90e0fc65dddbe4107b1b417d771c3be188c87197e89cf4b14415f56abc866f0`;
+- no distinct G3 repository remains under the `Kearm` author listing. The old
+  namespace is a Hub rename redirect, not a second copy.
 
 ## Non-claims
 
