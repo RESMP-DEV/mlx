@@ -89,3 +89,4 @@ wip
 .venv/
 
 /build-py/
+wandb/
