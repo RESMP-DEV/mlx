@@ -121,3 +121,38 @@ Required before any promotion:
   probes, not a training result.
 - The 896-prompt capture was still running when this receipt was written.
 - No candidate artifact was uploaded to Hugging Face.
+
+## Update: worker audit and hardening
+
+Two read-only workers audited the trainer and gate plan. Their reports are at:
+
+- `build/reports/dflash/worker-full-logit-contract-audit.txt`
+- `build/reports/dflash/worker-full-logit-gate-plan.txt`
+
+The contract audit confirmed the corrected full-replay routing, but found four
+additional defects that could invalidate later runs:
+
+1. `--epochs 0` or a completed-checkpoint resume could reference uninitialized
+   validation metrics.
+2. QAT validated fake-quantized effective weights but exported the unquantized
+   merged weights.
+3. `--loss-reduction sum` was ignored by the full-logit terms.
+4. Distribution mode could select a checkpoint by unrelated selector prefix
+   accuracy.
+
+Commit `5f47153` (`Harden full-logit training finalization`) fixes those paths,
+uses float32 selector score accumulation, adds a model/capture/config checkpoint
+fingerprint, and covers QAT export semantics, sum reduction, and full-replay
+gradients through both `fc` and a decoder layer. Verification passed with 46
+tests passed and 5 skipped.
+
+A post-fix remote smoke on the same 128-cycle pilot completed successfully. It
+auto-selected `loss`, recorded the fingerprint, trained 99 steps in 15.813
+seconds, and peaked at 9.604 GB reserved CUDA memory.
+
+The gate-plan worker recommends finishing the capture before any moving-index
+training, a bounded 4,096-cycle LR gate, then at most distribution and hybrid
+full-corpus arms on the existing one-GPU pod. Its suggested strict 128-pair
+sign-test threshold is more conservative than the existing campaign policy; the
+non-negotiable parent gate remains exact parity plus a positive paired mean and
+win/loss profile on the held-out set before any promotion.
