@@ -108,3 +108,30 @@ campaign, so neither offline number is treated as acceptance.
   full 896-prompt corpus; a full-corpus arm is a separate, larger run.
 - Throughput/memory are one-card measurements; multi-GPU aggregate throughput
   was reasoned from the launch-bound profile, not measured on a 2-card pod.
+
+## Update: completed capture and live rejection of arm1
+
+The 896-prompt capture completed at 20:52 UTC. Verification found:
+
+- prompt count: 896;
+- indexed cycles: 62,026;
+- cycle directories: 62,026;
+- `full_logits: true`;
+- elapsed capture time: 16,457.389 seconds.
+
+The watcher then ran the real Mac live gate for arm1:
+
+- exact 256-token parity: `token_match: true`;
+- parity smoke acceptance: `0.703125`;
+- candidate `heldout128` mean acceptance: `0.6683250000501196`;
+- incumbent mean acceptance: `0.6803182327226998`;
+- mean delta: `-0.011993232672580012`;
+- profile: 27 candidate wins, 10 ties, 91 losses;
+- two-sided sign-test p-value: `2.6899026850690616e-9`.
+
+Decision: rejected. Exact parity alone is not acceptance, and the large offline
+CE/top1/prefix gains did not transfer to live acceptance. Paired receipt:
+`build/reports/dflash/gate-arm1-2e-6-heldout128-paired.json`.
+
+This rejection also removes the current justification for multi-GPU spend: the
+full-logit candidate is not yet live-superior even on one card.
