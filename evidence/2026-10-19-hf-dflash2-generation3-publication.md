@@ -95,3 +95,37 @@ Publication does not change the acceptance evidence. The metrics remain paired
 runtime measurements, not broad task-quality, natural-EOS, long-context, or
 controlled thermal-throughput proof. The repository intentionally does not
 include the training traces or capture tensors.
+
+## Rename, model-tree fix, and public visibility
+
+Per a later user instruction, the repository was renamed and made public.
+
+- Move receipt: `build/reports/dflash/hf-dflash2-rename.json`
+  (`RESMP-DEV/Qwen3.8-27B-DFlash2-G3-Combined` -> `RESMP-DEV/DFlash2`).
+- Card-update receipt: `build/reports/dflash/hf-dflash2-card-update.log`.
+- Public-settings receipt: `build/reports/dflash/hf-dflash2-public.json`.
+- Public info: `build/reports/dflash/hf-dflash2-public-info.json`.
+
+Final state:
+
+- Hub repository: `RESMP-DEV/DFlash2`
+- URL: `https://huggingface.co/RESMP-DEV/DFlash2`
+- visibility: public (unauthenticated API returns HTTP 200; `private: false`)
+- revision after rename and card update:
+  `035b76311db31244f0f15bf37cc539bdcaee34fb`
+- old name redirects with HTTP 307, not a duplicate repository
+
+The model card was rewritten to remove the confusing Hub model tree. The
+`base_model` frontmatter field was dropped because it produced a
+`Finetuned (575)` tree entry that mislabeled a small speculative draft head as
+a fine-tune of the full Qwen target. Post-change Hub metadata reports
+`baseModels: null` and `childrenModelCount` all zero, confirming the tree panel
+is gone. The card now states plainly that the artifact is draft-only, has no
+tokenizer or target weights, and must run inside a DFlash2 speculative runtime
+with `Qwen/Qwen3.8-27B` as the verifier. The Qwen relationship is kept as a
+prose sentence rather than a machine-readable base-model link.
+
+The six-file contents, the `model.safetensors` LFS OID
+`c90e0fc65dddbe4107b1b417d771c3be188c87197e89cf4b14415f56abc866f0`, and the
+recorded acceptance and parity metrics are unchanged by the rename. Publication
+visibility does not change the acceptance evidence.
