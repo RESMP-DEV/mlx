@@ -76,3 +76,35 @@ has not yet been measured. No corrected QAT artifact is promoted.
 - It is not evidence against full-head QAT.
 - The RTN control's live score remains valid for that artifact, but not as a
   matched-base QAT control.
+
+## Corrected QAT live-gate result
+
+The first valid full-head QAT MXFP4 run used `--replay-draft` from the RTN
+control's base (`promoted-blend050`), trained for 3,313 cycles, and exported
+all 46 LoRA `b` matrices as nonzero (max magnitude `0.0023674`). Its packed
+MLX artifact SHA-256 is
+`3b868f22912c1873b68127b079f9a9a0b2fad661b77e1ce60fba972dfd896c8c`; it loaded
+as 47 native MXFP4 `QuantizedLinear` modules.
+
+Live gate on `heldout128`:
+
+- QAT mean acceptance: `0.6684078205914255`
+- RTN MXFP4 control: `0.674705131392368`
+- BF16 incumbent: `0.6803182327226996`
+- QAT vs RTN delta: `-0.0062973` (30 wins / 22 ties / 76 losses, p `9.10e-6`)
+- QAT vs BF16 delta: `-0.0119104` (18 wins / 21 ties / 89 losses, p `1.78e-12`)
+- QAT trained vs QAT zero-adapter baseline: `-0.0009543` (p `0.402`)
+
+Decision: rejected. With the gradient-path defect fixed and a matched base,
+true QAT does **not** improve the RTN MXFP4 control. The trained adapters made
+no statistically meaningful live difference over the zero-adapter variant, and
+both QAT artifacts remain below the RTN control. The incumbent BF16 draft
+stays champion.
+
+Paired receipt:
+`build/reports/dflash/gate-qatreplay-fast-g1-heldout128-paired.json`.
+
+Non-claims: this corrected run was a 3,313-cycle fast arm from a 11,540-cycle
+top-k capture. It does not test the full 62,026-cycle corpus or the full-vocab
+CE+TV objective. It is, however, the first matched-base full-head QAT live
+result.
