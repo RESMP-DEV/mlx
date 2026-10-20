@@ -81,22 +81,42 @@ full-logit capture on B550 or a Mac-side QAT run. The Mac cannot host CUDA QAT;
 the objective and the QAT lane are therefore separable on the current
 hardware, which is why the executed QAT arms use the selector objective.
 
-## Live gates (pending, queued)
+## Live gates (completed)
 
-Queued on the Mac GPU behind the MXFP4 control gate:
-- MXFP4 control gate: RTN MXFP4 draft (`Promoted-RTN-MXFP4`, never previously
-  gated) on `heldout128`.
-- QAT gate: `dflash-qat-mxfp4-lr2e-6` parity plus `heldout128` acceptance.
+Both gates ran on the same 128-prompt held-out corpus and target.
 
-Both must beat the BF16 incumbent control already collected
-(`gate-incumbent-heldout128`, mean 0.680318) under the same protocol:
-exact parity, positive mean delta, wins greater than losses, and a two-sided
-paired sign test at p <= 0.05.
+### RTN MXFP4 control
+
+The previously ungated `Promoted-RTN-MXFP4` artifact scored mean acceptance
+`0.674705131392368` on 128 prompts.
+
+### QAT MXFP4
+
+`dflash-qat-mxfp4-lr2e-6` passed exact 256-token parity
+(`token_match: true`; parity smoke acceptance `0.703125`) and scored mean
+acceptance `0.669362144232676` on 128 prompts.
+
+Paired results:
+
+| Comparison | mean delta | W/T/L | two-sided sign p |
+|---|---:|---|---:|
+| QAT vs BF16 incumbent | -0.010956 | 27/18/83 | 8.31e-8 |
+| QAT vs RTN MXFP4 control | -0.005343 | 33/27/68 | 6.41e-4 |
+
+Decision: rejected. QAT recovered part of the offline quantization gap but did
+not transfer that recovery to live acceptance; it is worse than both the BF16
+incumbent and the simpler RTN MXFP4 control.
+
+Paired receipts:
+
+- `build/reports/dflash/gate-qat-mxfp4-lr2e-6-heldout128-paired.json`
+- `build/reports/dflash/gate-rtn-mxfp4-control-heldout128/results.json`
 
 ## Non-claims
 
-- No QAT candidate is promoted; the live gates have not completed.
-- Offline prefix/top1 are captured-cycle proxies, not acceptance.
+- No QAT candidate is promoted; the live gate rejected it.
+- Offline prefix/top1 are captured-cycle proxies, not acceptance, and the QAT
+  offline recovery did not transfer.
 - The BF16 control at LR 2e-6 not moving is a single-arm observation at one
   learning rate, not proof that BF16 cannot improve.
 - The QAT arms trained on a 11,540-cycle top-k capture, not the full 62,026-cycle
